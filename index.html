@@ -1,0 +1,176 @@
+<html>
+    <head>
+        <title>Wave function collapse</title>
+
+        <style>
+
+            .tile {
+                width: 60px;
+                height: 60px;
+                display: inline-block;
+                color: #222C;
+            }
+
+            .ROCK {
+                background-color: #444;
+            }
+
+            .GRASS {
+                background-color: #070;
+            }
+
+            .SAND {
+                background-color: #990;
+            }
+
+            .WATER {
+                background-color: #227;
+            }
+
+            .FOREST {
+                background-color: #030;
+            }
+
+            .SNOW {
+                background-color: #ddd;
+            }
+
+        </style>
+
+    </head>
+    <body>
+
+        <div id="grid">
+
+        </div>
+
+        <script>
+        
+            function generateMap(N) {
+                const TILE_TYPES = {
+                    'FOREST': { bias: 0.2, adjacent: ['GRASS', 'ROCK'] },
+                    'GRASS': { bias: 0.6, adjacent: ['FOREST', 'SAND', 'ROCK'] },
+                    'SAND': { bias: 0.15, adjacent: ['GRASS', 'WATER', 'ROCK'] },
+                    'WATER': { bias: 0.5, adjacent: ['SAND', 'ROCK'] },
+                    'ROCK': { bias: 0.05, adjacent: ['FOREST', 'GRASS', 'SAND', 'WATER'] },
+                    'SNOW': { bias: 0.05, adjacent: ['ROCK'] }
+                };
+
+                const map = [];
+                const tiles = Object.keys(TILE_TYPES);
+                const weights = {};
+
+                // initialize map with empty tiles
+                for (let i = 0; i < N; i++) {
+                    const row = [];
+                    for (let j = 0; j < N; j++) {
+                        row.push(null);
+                    }
+                    map.push(row);
+                }
+
+                // set up initial weight values for each tile type
+                tiles.forEach(tile => {
+                    weights[tile] = TILE_TYPES[tile].bias;
+                });
+
+                // choose a random starting tile
+                const startTile = getRandomTile(tiles, weights);
+                map[0][0] = startTile;
+
+                // iterate over each tile in the map and collapse its possible states
+                for (let i = 0; i < N; i++) {
+                    for (let j = 0; j < N; j++) {
+                        if (map[i][j] !== null) {
+                            // this tile has already been assigned a type
+                            continue;
+                        }
+
+                        const adjacentTiles = getAdjacentTiles(map, i, j);
+                        const possibleTiles = tiles.filter(tile => canTileGoNextTo(adjacentTiles, tile, TILE_TYPES));
+
+                        // check if there are any possible tiles left
+                        if (possibleTiles.length === 0) {
+                            throw new Error(`No possible tiles left for tile ${i},${j}`);
+                        }
+
+                        // choose a random tile from the possible tiles
+                        const tile = getRandomTile(possibleTiles, weights);
+                        map[i][j] = tile;
+                    }
+                }
+
+                return map;
+            }
+
+            function canTileGoNextTo(adjacentTiles, tile, TILE_TYPES) {
+                // check if this tile type can be placed next to any of the adjacent tiles
+                return adjacentTiles.some(adjacentTile => {
+                    const adjacentTileType = TILE_TYPES[adjacentTile];
+                    return adjacentTileType.adjacent.includes(tile);
+                });
+            }
+
+            function getAdjacentTiles(map, i, j) {
+                const adjacentTiles = [];
+                const N = map.length;
+
+                if (i > 0) {
+                    adjacentTiles.push(map[i - 1][j]);
+                }
+                if (i < N - 1) {
+                    adjacentTiles.push(map[i + 1][j]);
+                }
+                if (j > 0) {
+                    adjacentTiles.push(map[i][j - 1]);
+                }
+                if (j < N - 1) {
+                    adjacentTiles.push(map[i][j + 1]);
+                }
+
+                return adjacentTiles.filter(tile => tile !== null);
+            }
+
+            function getRandomTile(tiles, weights) {
+                const totalWeight = tiles.reduce((sum, tile) => sum + weights[tile], 0);
+
+                let random = Math.random() * totalWeight;
+
+                for (let i = 0; i < tiles.length; i++) {
+                    const tile = tiles[i];
+                    const weight = weights[tile];
+
+                    if (random < weight) {
+                        return tile;
+                    }
+
+                    random -= weight;
+                }
+
+                // this should never happen, but just in case
+                throw new Error('Unable to generate random tile');
+            }
+
+            const map = generateMap(10);
+            console.log("generateMap", map);
+
+            let grid = document.getElementById("grid");
+
+            map.forEach(function(row) {
+                row.forEach(function(tile) {
+                    const textnode = document.createTextNode(tile);
+                    const divnode = document.createElement('div');
+                    divnode.className = "tile " + tile;
+
+                    divnode.appendChild(textnode);
+                    grid.appendChild(divnode);
+                });
+
+                const linebreak = document.createElement("br");
+                grid.appendChild(linebreak);
+            });
+
+        </script>
+
+    </body>
+</html>
